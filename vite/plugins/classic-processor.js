@@ -127,13 +127,14 @@ export default function classicProcessor(isProd) {
         localId = localId + '.js';
       }
       if (jsRegex.test(localId, localId)) {
-        console.log(localId);
-        for (const ext of templateExtensions) {
-          const path = id.replace(/\.(js|ts)$/, `.${ext}`);
-          if (fs.existsSync(path)) {
-            const prefix = `import { hbs } from 'ember-cli-htmlbars'; import __TEMPLATE__ from '${path}';const __COLOCATED_TEMPLATE__ = __TEMPLATE__;`;
-            code = prefix + code;
-            break;
+        if (!id.endsWith('.hbs')) {
+          for (const ext of templateExtensions) {
+            const path = id.replace(/\.(js|ts)$/, `.${ext}`);
+            if (fs.existsSync(path)) {
+              const prefix = `import { hbs } from 'ember-cli-htmlbars'; import __TEMPLATE__ from '${path}';const __COLOCATED_TEMPLATE__ = __TEMPLATE__;`;
+              code = prefix + code;
+              break;
+            }
           }
         }
         const processors = mapping[pkgName]?.jsProcessors || jsProcessors;
