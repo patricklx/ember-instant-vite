@@ -6,11 +6,17 @@ import * as polyfill from 'ember-cached-decorator-polyfill/index';
 import * as debug from '@ember-data/debug';
 import * as runtime from '@glimmer/runtime';
 import * as metal from '@ember/-internals/metal/index';
+import * as modifiers from '@ember/modifier';
+import * as helpers from '@ember/helper';
+import * as emberDataGraph from '@ember-data/graph/-private';
 define(`${pkg.name}/config/environment`, [], () => config);
+define('@ember-data/graph/-private', [], () => emberDataGraph);
 define(`ember-cached-decorator-polyfill/index`, [], () => polyfill);
 define(`@ember-data/debug`, [], () => debug);
 define(`@ember/-internals/metal/index`, [], () => metal);
 define(`@glimmer/runtime`, [], () => runtime);
+define(`@ember/modifier`, [], () => modifiers);
+define(`@ember/helper`, [], () => helpers);
 
 globalThis.EmberENV = Object.assign({
   FEATURES: {},

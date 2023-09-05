@@ -10,6 +10,7 @@ function patchExports() {
   const p = path.resolve('.', 'node_modules/ember-cached-decorator-polyfill/package.json');
   const pkg = JSON.parse(fs.readFileSync(p));
   pkg.exports['./addon/index'] = './addon/index';
+  pkg.exports['./addon'] = './addon/index';
   fs.writeFileSync(p, JSON.stringify(pkg, null, 2));
 }
 
@@ -20,9 +21,11 @@ app.options.babel.plugins.push(configPlugin, babelHotReloadPlugin, '@babel/plugi
 app.toTree('.', '.');
 
 let emberDeps: string[] = [];
+let emberAddons: string[] = [];
 
 function loadAddons(addons: any[]) {
   emberDeps.push(...addons.map(a => a.name));
+  emberAddons.push(...addons);
   addons.forEach(a => loadAddons(a.addons));
 }
 loadAddons(app.project.addons);
@@ -32,5 +35,6 @@ emberDeps = [...new Set(emberDeps)];
 export {
   projectName,
   emberDeps,
+  emberAddons,
   app
 };

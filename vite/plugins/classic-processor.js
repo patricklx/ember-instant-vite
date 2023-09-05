@@ -1,5 +1,6 @@
 import { app } from '../utils';
 import config from '../babel/config';
+import * as parallelBabel from 'broccoli-babel-transpiler/lib/parallel-api';
 import fs from 'node:fs';
 
 app.options['ember-cli-babel'] = app.options['ember-cli-babel'] || {};
@@ -31,7 +32,19 @@ const mapping = {};
 
 function loadAddons(addons) {
   addons.forEach((addon) => {
-    mapping[addon.name] = mapping[addon.name] || addon;
+    if (mapping[addon.name] && mapping[addon.name] !== addon) {
+      if (addon.options?.babel?.plugins) {
+        for (const p of addon.options.babel.plugins) {
+          const has = mapping[addon.name].options.babel.plugins.find(x => x[0] === p[0]);
+          if (!has) {
+            mapping[addon.name].options.babel.plugins.push(p);
+          }
+        }
+      }
+    } else {
+      mapping[addon.name] = addon;
+    }
+    // mapping[addon.name] = addon;
     addon.options = addon.options || {};
     addon.options.babel = addon.options.babel || {};
     addon.options.babel.plugins = addon.options.babel.plugins || [];
@@ -97,6 +110,7 @@ const templateRegex = new RegExp(`.*\\.(${templateExtensions.join('|')})$`);
 console.log('templateRegex', templateRegex);
 console.log('jsRegex', jsRegex);
 
+let babelAddon = require('ember-cli-babel');
 
 export const allExtensions = [...new Set([...jsExtensions, ...templateExtensions].filter(x => !!x).map(x => `.${x}`))];
 export default function classicProcessor(isProd) {
@@ -105,7 +119,8 @@ export default function classicProcessor(isProd) {
     enforce: 'pre',
     async transform(src, id) {
       let localId = id;
-      localId = localId.replace(app.project.root, '');
+      localId = localId.replace(app.project.root + '/app/', '');
+      localId = localId.replace(app.project.root + '/addon/', '');
       let pkgName;
       if (localId.includes('node_modules')) {
         localId = localId.split('node_modules').slice(-1)[0];
@@ -117,6 +132,7 @@ export default function classicProcessor(isProd) {
           offset = 3;
         }
         localId = parts.slice(offset).join('/');
+        localId = localId.replace(/^addon\//, `${pkgName}/`);
       }
 
       let code = src;
@@ -127,9 +143,9 @@ export default function classicProcessor(isProd) {
         localId = localId + '.js';
       }
       if (jsRegex.test(localId, localId)) {
-        if (!id.endsWith('.hbs')) {
+        if (!id.endsWith('.hbs') && id.includes('/components/')) {
           for (const ext of templateExtensions) {
-            const path = id.replace(/\.(js|ts)$/, `.${ext}`);
+            const path = id.replace(/\..*$/, `.${ext}`);
             if (fs.existsSync(path)) {
               const prefix = `import { hbs } from 'ember-cli-htmlbars'; import __TEMPLATE__ from '${path}';const __COLOCATED_TEMPLATE__ = __TEMPLATE__;`;
               code = prefix + code;
@@ -137,11 +153,39 @@ export default function classicProcessor(isProd) {
             }
           }
         }
-        const processors = mapping[pkgName]?.jsProcessors || jsProcessors;
-        code = await processors.reduce(async(prev, p) => await p(await prev, localId), code) || code;
-        return {
-          code: code
-        };
+        const addon = mapping[pkgName] || app;
+        const babelPlugins = addon.options.babel.plugins || [];
+        const plugins = babelAddon.buildEmberPlugins(addon.project?.root || addon.root);
+
+        const isS = (p) => Array.isArray(p);
+
+        const allPlugins = [['@babel/plugin-transform-typescript', { allowDeclareFields: true }]].concat(plugins).concat(babelPlugins)
+          .filter(b => !b[0] || b[0] && !b[0].includes('plugin-transform-modules-amd'))
+          .filter(b => !b[0] || b[0] && !b[0].includes('babel-plugin-module-resolver'));
+
+        let all = allPlugins
+          .map(p => isS(p) ? p : [p]);
+
+        const set = new Set();
+        all = [];
+        allPlugins.forEach((p, i) => {
+          if (typeof p[0] === 'string' && p[0].length > 1) {
+            const resolved = require.resolve(p[0]);
+            if (set.has(resolved)) {
+              return;
+            }
+            set.add(resolved);
+          }
+          all.push(p);
+        });
+
+        const result = await parallelBabel.transformString(code, {
+          babel: {
+            filename: localId,
+            plugins: all
+          }
+        });
+        return result;
       }
     },
   };

@@ -22,10 +22,6 @@ export const coreAlias = [
     replacement: nodePath('tracked-toolbox/dist')
   },
   {
-    find: '@glimmer/validator',
-    replacement: nodePath('@glimmer/validator/dist/modules/es2017'),
-  },
-  {
     find: /^ember-testing$/,
     replacement: 'ember-source/dist/packages/ember-testing',
   },
@@ -71,10 +67,6 @@ export const coreAlias = [
     find: /@glimmer\/tracking$/,
     replacement: nodePath('ember-source/dist/packages/@glimmer/tracking'),
   },
-  // {
-  //   find: /^@embroider\/util$/,
-  //   replacement: compatPath('embroider-util/index.ts'),
-  // },
   {
     find: /^@embroider\/macros\/es-compat2$/,
     replacement: nodePath('@embroider/macros/src/addon/es-compat2.js'),
@@ -96,10 +88,6 @@ export const coreAlias = [
     find: /^ember-component-manager$/,
     replacement:
       '@glimmer/component/addon/-private/ember-component-manager',
-  },
-  {
-    find: /^@glimmer\/component$/,
-    replacement: '@glimmer/component/addon/-private/component',
   },
   {
     find: /^@glimmer\/env$/,

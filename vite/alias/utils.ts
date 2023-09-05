@@ -14,7 +14,7 @@ export function compatPath(name: string) {
 export function emberGlimmerDepsPackages() {
   return fs
     .readdirSync('node_modules/ember-source/dist/dependencies/@glimmer')
-    .filter((el) => !el.includes('env.') && !el.includes('manager.'))
+    .filter((el) => !el.includes('env.'))
     .map((el) => el.replace('.js', ''));
 }
 

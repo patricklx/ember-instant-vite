@@ -6,6 +6,7 @@ import './inspector';
 import app from '../../../app/app';
 import './app';
 import './addons';
+import './styles';
 import config from 'config/environment';
 import pkg from '../../../package.json';
 import router from '../../../app/router';
