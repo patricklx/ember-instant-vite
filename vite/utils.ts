@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import configPlugin from './babel/config';
 import { babelHotReloadPlugin } from './babel/hot-reload';
+import { pathsImporter } from "./plugins/scss-utils";
 
 const packageJson = require('../package.json');
 const projectName = packageJson.name;
@@ -18,6 +19,13 @@ patchExports();
 
 const app = require('../ember-cli-build')();
 app.options.babel.plugins.push(configPlugin, babelHotReloadPlugin, '@babel/plugin-transform-class-static-block');
+try {
+  const MacrosNode = require('@embroider/macros/src/node');
+  const config = MacrosNode.MacrosConfig.for(app, app.project.root);
+  config.finalize();
+} catch (e) {
+  console.log(e);
+}
 app.toTree('.', '.');
 
 let emberDeps: string[] = [];
@@ -32,9 +40,21 @@ loadAddons(app.project.addons);
 
 emberDeps = [...new Set(emberDeps)];
 
+const scssImporters = [];
+if (emberAddons.find(a => a.name === 'ember-hbs-imports')) {
+  scssImporters.push(...require('./plugins/ember-hbs-imports').scssImporter);
+}
+if (emberAddons.find(a => a.name === 'ember-css-modules')) {
+  scssImporters.push(...require('./plugins/ember-component-css').scssImporter);
+}
+if (emberAddons.find(a => a.name === 'ember-css-modules')) {
+  scssImporters.push(...require('./plugins/ember-component-css').scssImporter);
+}
+
 export {
   projectName,
   emberDeps,
   emberAddons,
-  app
+  app,
+  scssImporters
 };

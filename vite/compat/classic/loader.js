@@ -1,5 +1,5 @@
 import loader from 'loader.js';
-globalThis.define = loader.define;
-globalThis.require = loader.require;
-globalThis.requirejs = loader.require;
-globalThis.requireModule = loader.require;
+globalThis.define = globalThis.define || loader.define;
+globalThis.require = globalThis.require || loader.require;
+globalThis.requirejs = globalThis.requirejs || loader.require;
+globalThis.requireModule = globalThis.requireModule || loader.require;

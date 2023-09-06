@@ -2,6 +2,7 @@ import { app } from '../utils';
 import config from '../babel/config';
 import * as parallelBabel from 'broccoli-babel-transpiler/lib/parallel-api';
 import fs from 'node:fs';
+import path from 'path';
 
 app.options['ember-cli-babel'] = app.options['ember-cli-babel'] || {};
 app.options['ember-cli-babel'].compileModules = false;
@@ -110,7 +111,7 @@ const templateRegex = new RegExp(`.*\\.(${templateExtensions.join('|')})$`);
 console.log('templateRegex', templateRegex);
 console.log('jsRegex', jsRegex);
 
-let babelAddon = require('ember-cli-babel');
+const babelAddon = require('ember-cli-babel');
 
 export const allExtensions = [...new Set([...jsExtensions, ...templateExtensions].filter(x => !!x).map(x => `.${x}`))];
 export default function classicProcessor(isProd) {
@@ -137,13 +138,39 @@ export default function classicProcessor(isProd) {
 
       let code = src;
       if (templateRegex.test(localId, localId)) {
-        const addon = mapping[pkgName];
-        const processors = addon?.templateProcessors || templateProcessors;
-        code = await processors.reduce(async(prev, p) => await p(await prev, localId), code) || code;
-        localId = localId + '.js';
+        const addon = mapping[pkgName] || app.project;
+        const htmlBars = addon.addons.find(a => a.name === 'ember-cli-htmlbars');
+        if (id.endsWith('.hbs') && !id.endsWith('template.hbs') && htmlBars?.pkg.version.split('.')[0] >= 4) {
+          const hasBackingClass = jsExtensions.find(ext => fs.existsSync(id.replace(/\..*$/, `.${ext}`)));
+          if (!hasBackingClass) {
+            const templateContents = src;
+            const hbsInvocationOptions = {
+              contents: templateContents,
+              moduleName: localId,
+              parseOptions: {
+                srcName: localId,
+              },
+            };
+            const hbsInvocation = `hbs(${JSON.stringify(templateContents)}, ${JSON.stringify(
+              hbsInvocationOptions
+            )})`;
+            const jsContent = '' +
+              'import { hbs } from \'ember-cli-htmlbars\'; ' +
+              'import templateOnly from \'@ember/component/template-only\';' +
+              `const __COLOCATED_TEMPLATE__ = ${hbsInvocation};` +
+              'export default templateOnly();';
+            code = jsContent;
+            localId = localId + '.js';
+          }
+        }
+        if (!localId.endsWith('.js')) {
+          const processors = addon?.templateProcessors || templateProcessors;
+          code = await processors.reduce(async(prev, p) => await p(await prev, localId), code) || code;
+          localId = localId + '.js';
+        }
       }
       if (jsRegex.test(localId, localId)) {
-        if (!id.endsWith('.hbs') && id.includes('/components/')) {
+        if (!id.endsWith('.hbs')) {
           for (const ext of templateExtensions) {
             const path = id.replace(/\..*$/, `.${ext}`);
             if (fs.existsSync(path)) {

@@ -6,6 +6,12 @@ import * as view from '@ember/-internals/views';
 import * as ref from '@glimmer/reference';
 import * as val from '@glimmer/validator';
 import ember from 'ember';
+import debug from '@ember-data/debug';
+import { name } from '../../../package.json';
+
+ember.Application.initializers = {};
+
+define(`${name}/data-adapter`, [], () => debug);
 define('ember', [], () => ember);
 define('@ember/object/computed', [], () => computed);
 define('@ember/runloop', [], () => runloop);

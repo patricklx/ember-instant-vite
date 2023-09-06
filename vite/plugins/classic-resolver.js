@@ -1,15 +1,15 @@
 import glob from 'fast-glob';
 import path from 'path';
 import fs from 'fs';
-import { emberDeps, emberAddons, projectName } from '../utils';
+import { emberDeps, emberAddons, projectName, app as emberApp } from '../utils';
 
 const rootDir = path.resolve('.');
 const currentDir = path.dirname(import.meta.url.replace('file://', ''));
 const compatDir = path.resolve(currentDir, '../compat/classic');
 
 const init = path.join(compatDir, 'init.js');
-const podStyles = path.join(compatDir, 'ember-component-css', 'pod-styles.scss');
 const app = path.join(compatDir, 'app.js');
+const contentFor = path.join(compatDir, 'content-for.js');
 const addons = path.join(compatDir, 'addons.js');
 const styles = path.join(compatDir, 'styles.js');
 const config = path.join(rootDir, 'config/environment.js');
@@ -90,6 +90,24 @@ export default function hbsResolver() {
           map: null
         };
       }
+      if (id === contentFor) {
+        const placeHolders = ['head', 'head-footer', 'body', 'body-footer'];
+        const contents = {};
+        emberAddons.forEach(a => {
+          for (const placeHolder of placeHolders) {
+            contents[placeHolder] = contents[placeHolder] || '';
+            const c = a.contentFor?.(placeHolder, emberApp.project.config());
+            if (c) {
+              contents[placeHolder] += '\n';
+              contents[placeHolder] += c;
+            }
+          }
+        })
+        return {
+          code: `const contentFor = ${JSON.stringify(contents)}` + fs.readFileSync(contentFor).toString().split('\n').slice(1).join('\n'),
+          map: null
+        };
+      }
       if (id === glimmerOwner) {
         return {
           code: 'export { setOwner } from \'@ember/application\'',
@@ -132,7 +150,7 @@ export default function hbsResolver() {
           `app/**/*.{${extensions.join(',')}}`,
         ], {
           ignore: ['{app,addon}/init/**/*', '{app,addon}/initializers/**/*', '{app,addon}/instance-initializers/**/*']
-        }).map(r => r.replace(/\.(ts|js)$/, ''));
+        }).map(r => r.replace(/\.(ts|js|gts|gjs)$/, ''));
         imports = app.map(r => {
           return { name: r, import: `/${r}` };
         });
@@ -145,7 +163,7 @@ export default function hbsResolver() {
           ignore.push(...['**/*.d.ts', '**/*.js.map', 'app/{initializers,instance-initializers}/**/*', 'addon/{initializers,instance-initializers}/**/*']);
           const root = path.join(rootDir, 'node_modules', emberDep);
           const addonFiles = glob.sync([addonGlob, 'addon/index.{js,ts}'], { cwd: root, ignore })
-            .map(r => r.replace(/\.(ts|js)$/, ''))
+            .map(r => r.replace(/\.(ts|js|gts|gjs)$/, ''))
             .map(r => ({ name: r, import: path.join(emberDep, r).replace('dist/_app_/', ''), addon: emberDep }));
           imports.push(...addonFiles);
         }

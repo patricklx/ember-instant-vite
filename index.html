@@ -1,13 +1,22 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" style='background: black no-repeat fixed;
+background-image: url(resources/images/backgrounds/solarsystems/milkyway.jpg);
+background-position: 50% 50%;
+background-size: cover,cover;'>
   <head>
+    <link rel="manifest" href="manifest.json">
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + TS</title>
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1">
+    <title>Vite</title>
+    <meta id='content-for-head' />
+    <script type="module" src="/vite/compat/classic/entry" onload='document.getElementById("lds-ripple").remove()'>
+    </script>
+    <meta id='content-for-head-footer' />
   </head>
   <body>
-
+  <div id='content-for-body'></div>
     <div id="ember-basic-dropdown-wormhole"></div>
     <div id="app"></div>
     <style>
@@ -61,7 +70,7 @@
       }
 
     </style>
-<!--    <div class="lds-ripple"><div></div><div></div></div>-->
-    <script type="module" src="/vite/compat/classic/entry"></script>
+    <div id='lds-ripple' class="lds-ripple"><div></div><div></div></div>
+  <div id='content-for-body-footer'></div>
   </body>
 </html>

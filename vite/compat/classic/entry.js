@@ -1,3 +1,4 @@
+import './content-for';
 import 'jquery/dist/jquery';
 import './loader';
 import './defines';

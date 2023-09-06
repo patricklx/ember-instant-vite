@@ -1,4 +1,3 @@
-import glob from 'fast-glob';
 import { defineConfig } from 'vite';
 import babel from 'vite-plugin-babel';
 import { resolve } from 'node:path';
@@ -10,12 +9,12 @@ import { generateDefineConfig } from './vite/compat/ember-data-private-build-inf
 import { coreAlias } from './vite/alias/core';
 import { addonAliases, externals } from './vite/alias/addons';
 import { appAlias } from './vite/alias/app';
-import { emberAddons, emberDeps, app, projectName } from "./vite/utils";
+import { emberAddons, emberDeps, app, scssImporters } from './vite/utils';
 import fs from 'node:fs';
 import externalize from 'vite-plugin-externalize-dependencies';
 import commonjs from 'vite-plugin-commonjs';
 import path from 'path';
-import pluginNodeResolve from '@rollup/plugin-node-resolve';
+import { pathsImporter } from "./vite/plugins/scss-utils";
 
 
 const allExtensions = ['.mjs', '.js', '.ts', '.jsx', '.tsx', '.json', '.hbs', '.gts', '.gjs'];
@@ -23,40 +22,13 @@ const allExtensions = ['.mjs', '.js', '.ts', '.jsx', '.tsx', '.json', '.hbs', '.
 function isExternal(id: string) {
   return !id.startsWith('.') && !path.isAbsolute(id) && !id.startsWith('~/');
 }
-const postcss_1 = require("postcss");
-const postcss_scss_1 = require("postcss-scss");
-const spark_md5_1 = require("spark-md5");
-function generateScopedName(name, relativePath, namespace) {
-  relativePath = relativePath.replace(/\\/g, '/');
-  const prefix = relativePath.split('/').slice(-2)[0];
-  const hashKey = `${namespace}_${prefix}_${name}`;
-  return `${namespace}_${prefix}_${name}_${(0, spark_md5_1.hash)(hashKey).slice(0, 5)}`;
-}
-const rewriterPlugin = ({ filename, deep, namespace }) => {
-  return {
-    postcssPlugin: 'postcss-importable',
-    Once(css) {
-      if (deep) {
-        css.walkRules((rule) => {
-          rule.selectors = rule.selectors.map((selector) => {
-            const name = selector.slice(1);
-            return `.${generateScopedName(name, filename, namespace)}`;
-          });
-        });
-      }
-      else {
-        css.nodes.forEach((node) => {
-          if (node.type === 'rule') {
-            node.selectors = node.selectors.map((selector) => {
-              const name = selector.slice(1);
-              return `.${generateScopedName(name, filename, namespace)}`;
-            });
-          }
-        });
-      }
-    }
-  };
-};
+
+const cssIncludePaths = [
+  process.cwd(),
+  path.join(process.cwd(), 'node_modules'),
+  ...emberAddons.map(a => fs.existsSync(path.join(a.root, 'app', 'styles')) && path.join(a.root, 'app', 'styles')).filter(x => !!x),
+  ...emberAddons.map(a => fs.existsSync(path.join(a.root, 'addon', 'styles')) && path.join(a.root, 'addon', 'styles')).filter(x => !!x)
+];
 
 export default defineConfig(({ mode }) => {
   const isProd = mode === 'production';
@@ -67,85 +39,8 @@ export default defineConfig(({ mode }) => {
       preprocessorOptions: {
         scss: {
           alias: [],
-          importer: [
-            function(url, prev, done) {
-              if (!url.endsWith('.scoped.scss')) return null;
-              async function process() {
-                const plugins = [];
-                let namespace;
-                if (url.includes('node_modules')) {
-                  namespace = url.split('node_modules').slice(-1)[0];
-                  if (namespace.startsWith('@')) {
-                    namespace = namespace.split('/').slice(0, 2).join('/');
-                  } else {
-                    namespace = namespace.split('/')[0];
-                  }
-                } else {
-                  namespace = projectName;
-                }
-
-                const relativePath = url.split('node_modules').slice(-1)[0].replace('/' + namespace + '/addon', '');
-                plugins.push((0, rewriterPlugin)({
-                  filename: relativePath,
-                  namespace,
-                  deep: false
-                }));
-                const content = await fs.promises.readFile(url);
-                const result = await postcss_1(plugins).process(content, {
-                  from: url,
-                  to: url,
-                  parser: postcss_scss_1.parse
-                });
-                done({
-                  contents: result.css
-                });
-              }
-              process();
-            },
-            function(url, prev) {
-            if (url !== 'pod-styles') return null;
-            const imports = glob.sync([
-              'app/**/*.scoped.{scss,sass}',
-            ]);
-            const rootDir = path.resolve('.');
-            for (const emberDep of emberDeps) {
-              const root = path.join(rootDir, 'node_modules', emberDep);
-              const addonFiles = glob.sync([
-                'app/**/*.scoped.{scss,sass}',
-              ], { cwd: root });
-              imports.push(...addonFiles.map(f => path.join(root, f)));
-            }
-            return {
-              contents: imports.map(i => `@import '${i}';`).join('\n'),
-              syntax: 'scss'
-            };
-          }
-            ,
-            function(url) {
-              if (url !== 'modules') return null;
-              const imports = glob.sync([
-                'app/**/*.module.{scss,sass}'
-              ]);
-              const rootDir = path.resolve('.');
-              for (const emberDep of emberDeps) {
-                const root = path.join(rootDir, 'node_modules', emberDep);
-                const addonFiles = glob.sync([
-                  'addon/**/*.module.{scss,sass}'
-                ], { cwd: root });
-                imports.push(...addonFiles.map(f => path.join(root, f)));
-              }
-              return {
-                contents: imports.map(i => `@import '${i}';`).join('\n'),
-                syntax: 'scss'
-              };
-            }
-          ],
-          includePaths: [
-            process.cwd(),
-            path.join(process.cwd(), 'node_modules'),
-            ...emberAddons.map(a => fs.existsSync(path.join(a.root, 'app', 'styles')) && path.join(a.root, 'app', 'styles')).filter(x => !!x),
-            ...emberAddons.map(a => fs.existsSync(path.join(a.root, 'addon', 'styles')) && path.join(a.root, 'addon', 'styles')).filter(x => !!x)
-          ]
+          importer: [pathsImporter(cssIncludePaths)].concat(scssImporters),
+          includePaths: cssIncludePaths
         }
       }
     },
@@ -241,18 +136,11 @@ export default defineConfig(({ mode }) => {
     },
     resolve: {
       extensions: allExtensions,
-      get alias() {
-        if (!globalThis.aliasReturned) {
-          globalThis.aliasReturned = true;
-          return [
-            ...coreAlias,
-            ...addonAliases,
-            ...appAlias
-          ]
-        } else {
-          return []
-        }
-      },
+      alias: [
+        ...coreAlias,
+        ...addonAliases,
+        ...appAlias
+      ]
     },
     plugins: [
       externalize({ externals: externals }),
