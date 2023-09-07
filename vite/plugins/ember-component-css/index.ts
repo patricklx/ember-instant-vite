@@ -44,13 +44,13 @@ export const scssImporter = [
     if (url !== 'pod-styles') return null;
     const imports = glob.sync([
       'app/**/*.scoped.{scss,sass}',
-    ]);
+    ]).map(r => r.replaceAll('\\', '/'));
     const rootDir = path.resolve('.');
     for (const emberDep of emberDeps) {
       const root = path.join(rootDir, 'node_modules', emberDep);
       const addonFiles = glob.sync([
         'app/**/*.scoped.{scss,sass}',
-      ], { cwd: root });
+      ], { cwd: root }).map(r => r.replaceAll('\\', '/'));
       imports.push(...addonFiles.map(f => path.join(root, f)));
     }
     return {

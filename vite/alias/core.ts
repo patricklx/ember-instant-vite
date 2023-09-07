@@ -1,4 +1,5 @@
 import { compatPath, emberGlimmerDepsPackages, emberPackages, nodePath } from "./utils";
+import fs from 'node:fs';
 
 
 export const coreAlias = [
@@ -95,11 +96,11 @@ export const coreAlias = [
   },
   {
     find: /^backburner$/,
-    replacement: nodePath('backburner.js/dist/es6/backburner.js'),
+    replacement: nodePath('ember-source/dist/dependencies/backburner.js.js'),
   },
   {
     find: /^backburner.js$/,
-    replacement: nodePath('backburner.js/dist/es6/backburner.js'),
+    replacement: nodePath('ember-source/dist/dependencies/backburner.js.js'),
   },
   {
     find: /^ember-data\/version$/,
@@ -115,7 +116,7 @@ export const coreAlias = [
   },
   {
     find: /^ember-load-initializers$/,
-    replacement: nodePath('ember-load-initializers/addon/index.ts')
+    replacement: nodePath('ember-load-initializers/addon/index')
   },
   {
     find: 'require',
@@ -126,3 +127,10 @@ export const coreAlias = [
     replacement: compatPath('jquery'),
   },
 ];
+
+if (!fs.existsSync('./node_modules/jquery')) {
+  coreAlias.push({
+    find: /^jquery\/dist\/jquery$/,
+    replacement: compatPath('jquery'),
+  });
+}

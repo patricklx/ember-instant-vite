@@ -5,7 +5,9 @@ export const externals = [
   'ember-compatibility-helpers',
   'ember-cli-htmlbars',
   '@ember/template-compiler',
-  '@embroider/macros'
+  '@embroider/macros',
+  'ember-cli-addon-docs/app-files',
+  'ember-cli-addon-docs/addon-files',
 ];
 
 const exclude = ['loader.js'];
@@ -15,6 +17,9 @@ function esc(reg) {
 }
 
 function getMapping(addon) {
+  if (addon.name === 'ember-modifier') {
+    console.log(addon.name, addon.root, addon.pkg['ember-addon'].version);
+  }
   if (addon.pkg['ember-addon'].version !== 2) {
     return [
       {
@@ -22,25 +27,20 @@ function getMapping(addon) {
         replacement: `${addon.name}/app`
       },
       {
-        find: new RegExp(`^${esc(addon.name)}/addon`),
+        find: new RegExp(`^${esc(addon.name)}\\/addon`),
         replacement: `${addon.name}/addon`
       },
       {
-        find: new RegExp(`^${esc(addon.name)}`),
-        replacement: `${addon.name}/addon`
+        find: new RegExp(`^${esc(addon.name)}/`),
+        replacement: `${addon.name}/addon/`
+      },
+      {
+        find: new RegExp(`^${esc(addon.name)}$`),
+        replacement: `${addon.name}/addon/`
       }
     ];
   } else {
-    return [
-      {
-        find: new RegExp(`^${esc(addon.name)}$`),
-        replacement: nodePath(addon.name) + '/dist'
-      },
-      {
-        find: new RegExp(`^${esc(addon.name)}\\/`),
-        replacement: nodePath(addon.name) + '/dist/'
-      }
-    ];
+    return [];
   }
 }
 
@@ -48,6 +48,10 @@ export const addonAliases = [
   {
     find: 'fetch',
     replacement: compatPath('ember-fetch'),
+  },
+  {
+    find: 'ember-power-calendar-utils',
+    replacement: 'ember-power-calendar/utils',
   },
   ...deps.filter(x => !externals.includes(x.name))
     .map((e) => getMapping(e)).flat()

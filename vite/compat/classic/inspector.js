@@ -6,12 +6,33 @@ import * as view from '@ember/-internals/views';
 import * as ref from '@glimmer/reference';
 import * as val from '@glimmer/validator';
 import ember from 'ember';
-import debug from '@ember-data/debug';
-import { name } from '../../../package.json';
+import pkg from '../../../package.json';
 
 ember.Application.initializers = {};
 
-define(`${name}/data-adapter`, [], () => debug);
+let name = pkg.name;
+
+try {
+  const modules = await import.meta.glob('/tests/dummy/*.js');
+  if (modules['tests/dummy/app.js']) {
+    name = 'dummy';
+  }
+} catch (e) {}
+
+try {
+  const debug = await import('@ember-data/debug');
+  define(`${name}/data-adapter`, [], () => debug);
+} catch (e) {
+}
+
+try {
+  const debug = await import('@ember-data/debug');
+  define(`${name}/data-adapter`, [], () => debug);
+} catch (e) {
+}
+
+
+
 define('ember', [], () => ember);
 define('@ember/object/computed', [], () => computed);
 define('@ember/runloop', [], () => runloop);

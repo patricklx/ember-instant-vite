@@ -2,17 +2,35 @@ import config from '~/config/environment';
 import pkg from '../../../package.json';
 import jquery from 'jquery/dist/jquery';
 import ember from 'ember';
-import * as polyfill from 'ember-cached-decorator-polyfill/index';
-import * as debug from '@ember-data/debug';
 import * as runtime from '@glimmer/runtime';
 import * as metal from '@ember/-internals/metal/index';
 import * as modifiers from '@ember/modifier';
 import * as helpers from '@ember/helper';
-import * as emberDataGraph from '@ember-data/graph/-private';
-define(`${pkg.name}/config/environment`, [], () => config);
-define('@ember-data/graph/-private', [], () => emberDataGraph);
-define(`ember-cached-decorator-polyfill/index`, [], () => polyfill);
-define(`@ember-data/debug`, [], () => debug);
+
+try{
+  const modules = await import.meta.glob('/tests/dummy/app/*');
+  console.log('modules', modules);
+  define(`dummy/config/environment`, [], () => config);
+} catch (e) {
+  define(`${pkg.name}/config/environment`, [], () => config);
+}
+
+
+try {
+  const emberDataGraph = await import('@ember-data/graph/-private/*');
+  define('@ember-data/graph/-private', [], () => emberDataGraph);
+} catch (e) {}
+
+try {
+  const debug = await import('@ember-data/debug/*');
+  define(`@ember-data/debug`, [], () => debug);
+} catch (e) {}
+
+try {
+  const polyfill = await import('ember-cached-decorator-polyfill/index');
+  define(`ember-cached-decorator-polyfill/index`, [], () => polyfill);
+} catch (e) {}
+
 define(`@ember/-internals/metal/index`, [], () => metal);
 define(`@glimmer/runtime`, [], () => runtime);
 define(`@ember/modifier`, [], () => modifiers);

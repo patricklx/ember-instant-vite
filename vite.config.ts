@@ -14,11 +14,12 @@ import fs from 'node:fs';
 import externalize from 'vite-plugin-externalize-dependencies';
 import commonjs from 'vite-plugin-commonjs';
 import path from 'path';
-import { pathsImporter } from "./vite/plugins/scss-utils";
+import { pathsImporter } from './vite/plugins/scss-utils';
+import './vite/setup'
 
 
 const allExtensions = ['.mjs', '.js', '.ts', '.jsx', '.tsx', '.json', '.hbs', '.gts', '.gjs'];
-
+console.log(emberDeps);
 function isExternal(id: string) {
   return !id.startsWith('.') && !path.isAbsolute(id) && !id.startsWith('~/');
 }
@@ -35,6 +36,13 @@ export default defineConfig(({ mode }) => {
   const isDev = mode === 'development';
   const enableSourceMaps = isDev;
   return {
+    test: {
+      browser: {
+        enabled: true,
+        name: 'chromium',
+        provider: 'playwright'
+      },
+    },
     css: {
       preprocessorOptions: {
         scss: {
@@ -85,11 +93,11 @@ export default defineConfig(({ mode }) => {
       sourcemap: enableSourceMaps,
       rollupOptions: isDev
         ? {
-          external: isExternal,
+          // external: isExternal,
           // external: externals,
           input: {
-            main: resolve(__dirname, 'app/ui/index.html'),
-            nested: resolve(__dirname, 'tests/index.html')
+            main: resolve(__dirname, 'index.html'),
+            nested: resolve(__dirname, 'index.tests.html')
           }
         }
         : {
@@ -146,6 +154,7 @@ export default defineConfig(({ mode }) => {
       externalize({ externals: externals }),
       commonjs({
         filter(id) {
+          console.log('id', id)
           // `node_modules` is exclude by default, so we need to include it explicitly
           // https://github.com/vite-plugin/vite-plugin-commonjs/blob/v0.7.0/src/index.ts#L125-L127
           if (emberDeps.every(cjs => !id.includes(`node_modules/${cjs}`))) {

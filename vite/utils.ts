@@ -2,17 +2,18 @@ import fs from 'fs';
 import path from 'path';
 import configPlugin from './babel/config';
 import { babelHotReloadPlugin } from './babel/hot-reload';
-import { pathsImporter } from "./plugins/scss-utils";
 
 const packageJson = require('../package.json');
 const projectName = packageJson.name;
 
 function patchExports() {
   const p = path.resolve('.', 'node_modules/ember-cached-decorator-polyfill/package.json');
-  const pkg = JSON.parse(fs.readFileSync(p));
-  pkg.exports['./addon/index'] = './addon/index';
-  pkg.exports['./addon'] = './addon/index';
-  fs.writeFileSync(p, JSON.stringify(pkg, null, 2));
+  if (fs.existsSync(p)) {
+    const pkg = JSON.parse(fs.readFileSync(p));
+    pkg.exports['./addon/index'] = './addon/index';
+    pkg.exports['./addon'] = './addon/index';
+    fs.writeFileSync(p, JSON.stringify(pkg, null, 2));
+  }
 }
 
 patchExports();
@@ -51,7 +52,20 @@ if (emberAddons.find(a => a.name === 'ember-css-modules')) {
   scssImporters.push(...require('./plugins/ember-component-css').scssImporter);
 }
 
+
+let isTesting = false;
+const setIsTesting = () => isTesting = true;
+const getIsTesting = () => isTesting;
+const isAddon = fs.existsSync('addon');
+const hasSrc = fs.existsSync('src');
+
+console.log('isAddon', isAddon)
+
 export {
+  isAddon,
+  hasSrc,
+  setIsTesting,
+  getIsTesting,
   projectName,
   emberDeps,
   emberAddons,

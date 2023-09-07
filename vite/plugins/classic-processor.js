@@ -11,22 +11,28 @@ app.options['ember-cli-babel'].disableEmberModulesAPIPolyfill = true;
 const appJs = [...app.registry.registry.js].reverse();
 let jsExtensions = appJs.map(j => j.ext).flat().filter(x => !!x);
 const jsProcessors = [...appJs].reverse().map(j => {
-  const plugin = j.toTree('./.', './.');
-  if (plugin.extensions) {
-    jsExtensions.push(...plugin.extensions);
+  try {
+    const plugin = j.toTree('./.', './.');
+    if (plugin.extensions) {
+      jsExtensions.push(...plugin.extensions);
+    }
+    return plugin.processString?.bind(plugin);
+  } catch (e) {
+    // nope
   }
-  return plugin.processString?.bind(plugin);
 }).filter(x => !!x);
 
 
 const template = [...app.registry.registry.template].reverse();
 let templateExtensions = template.map(j => j.ext).flat().filter(x => !!x);
 const templateProcessors = [...template].reverse().map(j => {
-  const plugin = j.toTree('./.', './.');
-  if (plugin.extensions) {
-    templateExtensions.push(...plugin.extensions);
-  }
-  return plugin.processString?.bind(plugin);
+  try {
+    const plugin = j.toTree('./.', './.');
+    if (plugin.extensions) {
+      templateExtensions.push(...plugin.extensions);
+    }
+    return plugin.processString?.bind(plugin);
+  } catch (e) {}
 }).filter(x => !!x);
 
 const mapping = {};
@@ -60,16 +66,18 @@ function loadAddons(addons) {
       templateExtensions.push(...tpl.map(j => j.ext).flat().filter(x => !!x));
 
       const processors = [...tpl].reverse().map(j => {
-        const plugin = j.toTree('./.', './.');
-        if (plugin.extensions) {
-          templateExtensions.push(...plugin.extensions);
-        }
-        if (plugin.processString) {
-          Object.defineProperty(plugin, 'inputPaths', {
-            value: [addon.name]
-          });
-          return plugin.processString.bind(plugin);
-        }
+        try {
+          const plugin = j.toTree('./.', './.');
+          if (plugin.extensions) {
+            templateExtensions.push(...plugin.extensions);
+          }
+          if (plugin.processString) {
+            Object.defineProperty(plugin, 'inputPaths', {
+              value: [addon.name]
+            });
+            return plugin.processString.bind(plugin);
+          }
+        } catch (e) {}
       }).filter(x => !!x);
       addon.templateProcessors = processors;
     } else {
@@ -180,7 +188,7 @@ export default function classicProcessor(isProd) {
             }
           }
         }
-        const addon = mapping[pkgName] || app;
+        const addon = (id.includes('/_app_/') || id.includes('/app/')) ? (mapping[pkgName] || app) : app;
         const babelPlugins = addon.options.babel.plugins || [];
         const plugins = babelAddon.buildEmberPlugins(addon.project?.root || addon.root);
 

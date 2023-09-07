@@ -1,9 +1,13 @@
 import { compatPath, nodePath } from './utils';
-import { projectName } from '../utils';
+import { projectName, getIsTesting, isAddon } from '../utils';
 
 export const appAlias = [
   {
-    find: new RegExp(`^${projectName}\\/config\\/environment$`),
+    find: new RegExp(`^${(getIsTesting() || isAddon) ? 'dummy' : projectName}\\/config\\/environment$`),
+    replacement: compatPath('classic/environment.js')
+  },
+  {
+    find: /^\.\/config\/environment$/,
     replacement: compatPath('classic/environment.js')
   },
   {
@@ -12,11 +16,11 @@ export const appAlias = [
   },
   {
     find: /^~\//,
-    replacement: '/app/'
+    replacement: (getIsTesting() || isAddon) ? '/tests/dummy/' : '/app/'
   },
   {
     find: /^config\/environment$/,
-    replacement: nodePath('../config/environment.js')
+    replacement: (getIsTesting() || isAddon) ? '/tests/dummy/config/environment.js' : '../config/environment.js'
   },
   {
     find: /^three$/,
@@ -24,7 +28,16 @@ export const appAlias = [
   }
 ];
 
-appAlias.push({
-  find: new RegExp(`^${projectName}\\/`),
-  replacement: '/app/'
-});
+if (!getIsTesting() && !isAddon) {
+  appAlias.push({
+    find: new RegExp(`^${projectName}\\/`),
+    replacement: '/app/'
+  });
+} else {
+  appAlias.push({
+    find: new RegExp('^dummy\\/'),
+    replacement: '/tests/dummy/'
+  });
+}
+
+console.log('appAlias', appAlias)
