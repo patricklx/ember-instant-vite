@@ -1,13 +1,11 @@
-import { emberAddons } from '../utils';
+import { app, emberAddons, isAddon } from '../utils';
 import { compatPath, nodePath } from "./utils";
 
 export const externals = [
   'ember-compatibility-helpers',
   'ember-cli-htmlbars',
   '@ember/template-compiler',
-  '@embroider/macros',
-  'ember-cli-addon-docs/app-files',
-  'ember-cli-addon-docs/addon-files',
+  '@embroider/macros'
 ];
 
 const exclude = ['loader.js'];
@@ -17,26 +15,31 @@ function esc(reg) {
 }
 
 function getMapping(addon) {
-  if (addon.name === 'ember-modifier') {
+  const name = addon.pkg.name;
+  if (name === 'ember-modifier') {
     console.log(addon.name, addon.root, addon.pkg['ember-addon'].version);
   }
   if (addon.pkg['ember-addon'].version !== 2) {
+    return [{
+      find: new RegExp(`^${esc(name)}`),
+      replacement: `${name}`
+    }]
     return [
       {
-        find: new RegExp(`^${esc(addon.name)}\\/app`),
-        replacement: `${addon.name}/app`
+        find: new RegExp(`^${esc(name)}\\/app`),
+        replacement: `${name}/app`
       },
       {
-        find: new RegExp(`^${esc(addon.name)}\\/addon`),
-        replacement: `${addon.name}/addon`
+        find: new RegExp(`^${esc(name)}\\/addon`),
+        replacement: `${name}/addon`
       },
       {
-        find: new RegExp(`^${esc(addon.name)}/`),
-        replacement: `${addon.name}/addon/`
+        find: new RegExp(`^${esc(name)}/`),
+        replacement: `${name}/addon/`
       },
       {
-        find: new RegExp(`^${esc(addon.name)}$`),
-        replacement: `${addon.name}/addon/`
+        find: new RegExp(`^${esc(name)}$`),
+        replacement: `${name}/addon/`
       }
     ];
   } else {
@@ -53,6 +56,14 @@ export const addonAliases = [
     find: 'ember-power-calendar-utils',
     replacement: 'ember-power-calendar/utils',
   },
-  ...deps.filter(x => !externals.includes(x.name))
+  ...deps.filter(x => !externals.includes(x.name) && x.name !== app.project.name)
     .map((e) => getMapping(e)).flat()
 ];
+
+
+if (isAddon) {
+  addonAliases.push({
+    find: app.project.name,
+    replacement: '/addon/'
+  })
+}

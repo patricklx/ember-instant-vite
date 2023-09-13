@@ -6,31 +6,6 @@ import * as runtime from '@glimmer/runtime';
 import * as metal from '@ember/-internals/metal/index';
 import * as modifiers from '@ember/modifier';
 import * as helpers from '@ember/helper';
-
-try{
-  const modules = await import.meta.glob('/tests/dummy/app/*');
-  console.log('modules', modules);
-  define(`dummy/config/environment`, [], () => config);
-} catch (e) {
-  define(`${pkg.name}/config/environment`, [], () => config);
-}
-
-
-try {
-  const emberDataGraph = await import('@ember-data/graph/-private/*');
-  define('@ember-data/graph/-private', [], () => emberDataGraph);
-} catch (e) {}
-
-try {
-  const debug = await import('@ember-data/debug/*');
-  define(`@ember-data/debug`, [], () => debug);
-} catch (e) {}
-
-try {
-  const polyfill = await import('ember-cached-decorator-polyfill/index');
-  define(`ember-cached-decorator-polyfill/index`, [], () => polyfill);
-} catch (e) {}
-
 define(`@ember/-internals/metal/index`, [], () => metal);
 define(`@glimmer/runtime`, [], () => runtime);
 define(`@ember/modifier`, [], () => modifiers);
@@ -50,5 +25,41 @@ globalThis.jQuery = jquery;
 globalThis.Ember = ember;
 
 
-const testWaiters = await import('@ember/test-waiters');
-define(`@ember/test-waiters`, [], () => testWaiters);
+if (globalThis.isDummy) {
+  define(`dummy/config/environment`, [], () => config);
+} else {
+  define(`${pkg.name}/config/environment`, [], () => config);
+}
+
+
+try {
+  const emberDataGraph = await import('@ember-data/graph/-private/*');
+  define('@ember-data/graph/-private', [], () => emberDataGraph);
+} catch (e) {}
+
+try {
+  const debug = await import('@ember-data/debug/*');
+  define(`@ember-data/debug`, [], () => debug);
+} catch (e) {}
+
+try {
+  const polyfill = await import('ember-cached-decorator-polyfill/index');
+  define(`ember-cached-decorator-polyfill/index`, [], () => polyfill);
+} catch (e) {}
+
+
+try {
+  const testWaiters = await import('@ember/test-waiters');
+  define(`@ember/test-waiters`, [], () => testWaiters);
+} catch (e) {
+
+}
+
+
+try {
+  const polyfill = await import('ember-cached-decorator-polyfill');
+  define(`ember-cached-decorator-polyfill`, [], () => polyfill);
+} catch (e) {
+
+}
+

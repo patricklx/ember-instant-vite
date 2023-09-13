@@ -126,6 +126,10 @@ export const coreAlias = [
     find: /^jquery$/,
     replacement: compatPath('jquery'),
   },
+  {
+    find: /^lodash$/,
+    replacement: 'lodash-es',
+  },
 ];
 
 if (!fs.existsSync('./node_modules/jquery')) {

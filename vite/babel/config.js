@@ -1,5 +1,5 @@
-import pkg from '../../package.json';
-import fs from 'node:fs';
+const pkg = require('../../package.json');
+const fs = require('node:fs');
 
 
 const isAddon = fs.existsSync('addon');
@@ -11,7 +11,7 @@ if (isAddon) {
 }
 
 
-export default function() {
+module.exports = function() {
   return {
     visitor: {
       ImportDeclaration(path) {

@@ -1,6 +1,8 @@
 import { defineConfig } from 'vite';
 import babel from 'vite-plugin-babel';
 import { resolve } from 'node:path';
+import nodeResolve from 'resolve';
+import { promisify } from 'util';
 import classicProcessor from './vite/plugins/classic-processor';
 import gtsResolver from './vite/plugins/gts-resolver';
 import configResolver from './vite/plugins/classic-resolver';
@@ -18,6 +20,8 @@ import { pathsImporter } from './vite/plugins/scss-utils';
 import './vite/setup'
 
 
+const asyncNodeResolve = promisify(nodeResolve);
+
 const allExtensions = ['.mjs', '.js', '.ts', '.jsx', '.tsx', '.json', '.hbs', '.gts', '.gjs'];
 console.log(emberDeps);
 function isExternal(id: string) {
@@ -30,6 +34,39 @@ const cssIncludePaths = [
   ...emberAddons.map(a => fs.existsSync(path.join(a.root, 'app', 'styles')) && path.join(a.root, 'app', 'styles')).filter(x => !!x),
   ...emberAddons.map(a => fs.existsSync(path.join(a.root, 'addon', 'styles')) && path.join(a.root, 'addon', 'styles')).filter(x => !!x)
 ];
+
+const customResolver= {
+  name: 'ember-resolver',
+  resolveId: {
+    async handler(importee, importer, resolveOptions) {
+      console.log('importer, importee', importer, importee);
+      try {
+        const parts = importee.split('/');
+        if (parts[0].startsWith('@')) {
+          parts.splice(2, 0, 'addon');
+        } else {
+          parts.splice(1, 0, 'addon');
+        }
+        importee = parts.join('/')
+        return await asyncNodeResolve(importee, { basedir: importer, extensions: ['.js', '.ts', '.gts', '.gjs'] })
+      } catch (e) {
+
+      }
+      try {
+        const parts = importee.split('/');
+        if (parts[0].startsWith('@')) {
+          parts.splice(2, 0, 'dist');
+        } else {
+          parts.splice(1, 0, 'dist');
+        }
+        importee = parts.join('/')
+        return await asyncNodeResolve(importee, { basedir: importer, extensions: ['.js', '.ts', '.gts', '.gjs'] })
+      } catch (e) {
+        throw e;
+      }
+    }
+  }
+}
 
 export default defineConfig(({ mode }) => {
   const isProd = mode === 'production';
@@ -146,18 +183,33 @@ export default defineConfig(({ mode }) => {
       extensions: allExtensions,
       alias: [
         ...coreAlias,
-        ...addonAliases,
-        ...appAlias
-      ]
+        ...appAlias,
+        ...addonAliases.map(x => ({find: x.find, replacement: x.replacement, customResolver}))
+      ],
     },
     plugins: [
       externalize({ externals: externals }),
       commonjs({
         filter(id) {
-          console.log('id', id)
           // `node_modules` is exclude by default, so we need to include it explicitly
           // https://github.com/vite-plugin/vite-plugin-commonjs/blob/v0.7.0/src/index.ts#L125-L127
           if (emberDeps.every(cjs => !id.includes(`node_modules/${cjs}`))) {
+            return true;
+          }
+          if (id.includes('@ember-data/model')) {
+            return true;
+          }
+          if (id.includes('moment-timezone')) {
+            return true;
+          }
+          if (id.includes('ember-power-calendar')) {
+            return true;
+          }
+          if (id.includes('/ember-data/addon')) {
+            return true;
+          }
+
+          if (id.includes('/@ember/render-modifiers')) {
             return true;
           }
         }

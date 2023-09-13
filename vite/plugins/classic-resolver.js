@@ -12,6 +12,7 @@ const app = path.join(compatDir, 'app.js').replaceAll('\\', '/');
 const contentFor = path.join(compatDir, 'content-for.js').replaceAll('\\', '/');
 const addons = path.join(compatDir, 'addons.js').replaceAll('\\', '/');
 const styles = path.join(compatDir, 'styles.js').replaceAll('\\', '/');
+const dummy = path.join(compatDir, 'dummy.js').replaceAll('\\', '/');
 const config = path.join(rootDir, 'config/environment.js').replaceAll('\\', '/');
 const glimmerOwner = path.join(rootDir, 'node_modules/@glimmer/component/addon/-private/owner.ts').replaceAll('\\', '/');
 const loader = require.resolve('loader.js').replaceAll('\\', '/');
@@ -67,22 +68,36 @@ const isTesting = getIsTesting();
 
 const appName = (isAddon || isTesting) ? 'dummy' : projectName;
 const appRoot = (isAddon || isTesting) ? 'tests/dummy/app' : 'app';
+const testingAddon = {
+  name: projectName,
+  app: `/app/**/*.{${extensions.join(',')}}`,
+  addon: `/addon/**/*.{${extensions.join(',')}}`
+}
 
 export default function hbsResolver() {
   return {
     name: 'classic-resolver',
     enforce: 'pre',
-    transform(src, id) {
+    resolveId(id) {
+      if (id === 'ember-cli-addon-docs/app-files') {
+        return 'ember-cli-addon-docs/app-files'
+      }
+    },
+    load(id) {
       if (id === 'ember-cli-addon-docs/app-files') {
         return {
-          code: 'export default ' + JSON.stringify(glob.sync(appRoot + '/**/*'))
+          code: `export default Object.keys(import.meta.glob("../../${appRoot}/**/*"))`
         }
       }
       if (id === 'ember-cli-addon-docs/addon-files') {
         return {
-          code: 'export default ' + JSON.stringify(glob.sync('addon/**/*'))
+          code: 'export default Object.keys(import.meta.glob("../../addon/**/*"))'
         }
       }
+    },
+    transform(src, id) {
+      let code = '';
+
       if (id === styles) {
         let code = '';
         let st = path.join(rootDir, 'app', 'styles', 'app.css');
@@ -103,6 +118,12 @@ export default function hbsResolver() {
         }
         return {
           code,
+          map: null
+        };
+      }
+      if (id === dummy) {
+        return {
+          code: `globalThis.isDummy = ${isAddon}`,
           map: null
         };
       }
@@ -144,49 +165,67 @@ export default function hbsResolver() {
       }
       let imports;
       if (id === init) {
-        imports = glob.sync([
-          `${appRoot}/init/**/*.{js,ts}`,
-          `${appRoot}/initializers/**/*.{js,ts}`,
-          `${appRoot}/instance-initializers/**/*.{js,ts}`
-        ]).map(r => r.replace(/\.(ts|js)$/, ''))
-          .map(r => r.replaceAll('\\', '/'))
-          .map(r => ({ name: r, import: `/${r}` }));
-        for (const emberDep of emberDeps) {
-          const root = path.join(rootDir, 'node_modules', emberDep);
+        code += `const appModules = import.meta.glob([
+        '../../${appRoot}/init/**/*.{js,ts}',
+        '../../${appRoot}/initializers/**/*.{js,ts}',
+        '../../${appRoot}/instance-initializers/**/*.{js,ts}'
+        ], { eager: true });
+        Object.entries(appModules).forEach(([name, imp]) => define(name.replace('/${appRoot}/', '${appName}/').split('.').slice(0, -1).join('/'), [], () => imp));
+        `
+        imports = [];
+        for (const emberAddon of emberAddons) {
+          const root = emberAddon.packageRoot;
+          const name = emberAddon.pkg.name;
           const addonFiles = glob.sync([
-            'app/initializers/**/*.{js,ts}',
-            'app/instance-initializers/**/*.{js,ts}'
-          ], { cwd: root, ignore: ResolverConfig.ignoreAddonFiles[emberDep] })
+            '{app,_app_}/initializers/**/*.{js,ts}',
+            '{app,_app_}/instance-initializers/**/*.{js,ts}'
+          ], { cwd: root, ignore: ResolverConfig.ignoreAddonFiles[name] })
             .map(r => r.replace(extRegex, ''))
             .map(r => r.replaceAll('\\', '/'))
-            .map(r => ({ name: r, import: path.join(emberDep, r).replace('dist/_app_/', ''), addon: emberDep }));
+            .map(r => ({ name: r, import: path.join(root, r), addon: name }));
           imports.push(...addonFiles);
         }
       }
       if (id === app) {
-        const app = glob.sync([
-          `${appRoot}/**/*.{${extensions.join(',')}}`,
-          `${appRoot}/router.{${extensions.join(',')}}`,
-        ], {
-          ignore: ['{app,addon}/init/**/*', '{app,addon}/initializers/**/*', '{app,addon}/instance-initializers/**/*']
-        })
-          .map(r => r.replaceAll('\\', '/'))
-          .map(r => r.replace(/\.(ts|js|gts|gjs)$/, ''));
-        imports = app.map(r => {
-          return { name: r, import: `/${r}` };
-        });
+        code += `const appModules = import.meta.glob([
+        '/${appRoot}/**/*.{${extensions.join(',')}}',
+        '/${appRoot}/router.{${extensions.join(',')}}',
+        '!/${appRoot}/init/**/*',
+        '!/${appRoot}/initializers/**/*',
+        '!/${appRoot}/instance-initializers/**/*',
+        ], { eager: true });
+        Object.entries(appModules).forEach(([name, imp]) => define(name.replace('/${appRoot}/', '${appName}/').split('.').slice(0, -1).join('/'), [], () => imp));
+        `
+        if (isAddon) {
+          code += `const addonAppModules = import.meta.glob([
+        '${testingAddon.app}',
+        ], { eager: true });
+        Object.entries(addonAppModules).forEach(([name, imp]) => define(name.replace('/app/', '${testingAddon.name}/').split('.').slice(0, -1).join('/'), [], () => imp));
+        `;
+          code += `const addonModules = import.meta.glob([
+        '${testingAddon.app}}',
+        ], { eager: true });
+        Object.entries(addonModules).forEach(([name, imp]) => define(name.replace('/addon/', '${appName}/').split('.').slice(0, -1).join('/'), [], () => imp));
+        `;
+        }
+        imports = [];
       }
       if (id === addons) {
         imports = [];
-        for (const emberDep of emberDeps) {
-          if (ResolverConfig.ignoreAddons.has(emberDep)) continue;
-          const ignore = [...ResolverConfig.ignoreAddonFiles[emberDep] || []];
-          ignore.push(...['**/*.d.ts', '**/*.js.map', 'app/{initializers,instance-initializers}/**/*', 'addon/{initializers,instance-initializers}/**/*']);
-          const root = path.join(rootDir, 'node_modules', emberDep);
+        const processed = new Set();
+        for (const emberAddon of emberAddons) {
+          const name = emberAddon.pkg.name;
+          const root = emberAddon.packageRoot;
+          if (processed.has(root)) continue;
+          processed.add(root);
+          if (ResolverConfig.ignoreAddons.has(name)) continue;
+          if (name === projectName) continue;
+          const ignore = [...ResolverConfig.ignoreAddonFiles[name] || []];
+          ignore.push(...['**/*.d.ts', '**/*.js.map', '{app,_app_}/{initializers,instance-initializers}/**/*', 'addon/{initializers,instance-initializers}/**/*']);
           const addonFiles = glob.sync([addonGlob, 'addon/index.{js,ts}'], { cwd: root, ignore })
             .map(r => r.replace(/\.(ts|js|gts|gjs)$/, ''))
             .map(r => r.replaceAll('\\', '/'))
-            .map(r => ({ name: r, import: path.join(emberDep, r).replaceAll('\\', '/').replace('dist/_app_/', ''), addon: emberDep }));
+            .map(r => ({ name: r, import: path.join(root, r).replaceAll('\\', '/'), addon: name }));
           imports.push(...addonFiles);
         }
       }
@@ -207,9 +246,9 @@ export default function hbsResolver() {
             .replace(/^addon\//, `${r.addon}/`);
           return `define('${name}', [], () => imp${i})`;
         });
-        let code = imps.join(';\n') + '\n' + defines.join(';\n');
+        code += imps.join(';\n') + '\n' + defines.join(';\n');
         if (id === app) {
-          code += `\nexport default require('${appName}/app/app').default`;
+          code += `\nexport default globalThis.require('${appName}/app').default`;
         }
         return {
           code,

@@ -1,6 +1,7 @@
 import './content-for';
 import 'jquery/dist/jquery';
 import './loader';
+import './dummy';
 import './defines';
 import './init';
 import './inspector';

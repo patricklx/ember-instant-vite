@@ -28,12 +28,12 @@ export const appAlias = [
   }
 ];
 
-if (!getIsTesting() && !isAddon) {
-  appAlias.push({
-    find: new RegExp(`^${projectName}\\/`),
-    replacement: '/app/'
-  });
-} else {
+appAlias.push({
+  find: new RegExp(`^${projectName}\\/`),
+  replacement: '/app/'
+});
+
+if (isAddon) {
   appAlias.push({
     find: new RegExp('^dummy\\/'),
     replacement: '/tests/dummy/'
