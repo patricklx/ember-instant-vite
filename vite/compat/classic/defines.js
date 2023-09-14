@@ -30,36 +30,3 @@ if (globalThis.isDummy) {
 } else {
   define(`${pkg.name}/config/environment`, [], () => config);
 }
-
-
-try {
-  const emberDataGraph = await import('@ember-data/graph/-private/*');
-  define('@ember-data/graph/-private', [], () => emberDataGraph);
-} catch (e) {}
-
-try {
-  const debug = await import('@ember-data/debug/*');
-  define(`@ember-data/debug`, [], () => debug);
-} catch (e) {}
-
-try {
-  const polyfill = await import('ember-cached-decorator-polyfill/index');
-  define(`ember-cached-decorator-polyfill/index`, [], () => polyfill);
-} catch (e) {}
-
-
-try {
-  const testWaiters = await import('@ember/test-waiters');
-  define(`@ember/test-waiters`, [], () => testWaiters);
-} catch (e) {
-
-}
-
-
-try {
-  const polyfill = await import('ember-cached-decorator-polyfill');
-  define(`ember-cached-decorator-polyfill`, [], () => polyfill);
-} catch (e) {
-
-}
-

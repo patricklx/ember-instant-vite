@@ -5,7 +5,7 @@ export const externals = [
   'ember-compatibility-helpers',
   'ember-cli-htmlbars',
   '@ember/template-compiler',
-  '@embroider/macros'
+  '@embroider/macros',
 ];
 
 const exclude = ['loader.js'];
@@ -55,9 +55,7 @@ export const addonAliases = [
   {
     find: 'ember-power-calendar-utils',
     replacement: 'ember-power-calendar/utils',
-  },
-  ...deps.filter(x => !externals.includes(x.name) && x.name !== app.project.name)
-    .map((e) => getMapping(e)).flat()
+  }
 ];
 
 
@@ -65,5 +63,5 @@ if (isAddon) {
   addonAliases.push({
     find: app.project.name,
     replacement: '/addon/'
-  })
+  });
 }

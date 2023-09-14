@@ -199,6 +199,9 @@ function relativePath(id) {
   return localId;
 }
 
+
+const allExtensions = ['.mjs', '.js', '.ts', '.jsx', '.tsx', '.json', '.hbs', '.handlebars', '.gts', '.gjs'];
+
 export {
   isAddon,
   hasSrc,
@@ -210,5 +213,6 @@ export {
   app,
   scssImporters,
   relativePath,
-  rootPath
+  rootPath,
+  allExtensions
 };

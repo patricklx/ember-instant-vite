@@ -1,4 +1,4 @@
-import { compatPath, emberGlimmerDepsPackages, emberPackages, nodePath } from "./utils";
+import { compatPath, emberGlimmerDepsPackages, emberPackageDeps, emberPackages, nodePath } from './utils';
 import fs from 'node:fs';
 
 
@@ -6,6 +6,10 @@ export const coreAlias = [
   ...emberPackages().map((pkg) => ({
     find: `@ember/${pkg}`,
     replacement: nodePath(`ember-source/dist/packages/@ember/${pkg}`),
+  })),
+  ...emberPackageDeps().map((pkg) => ({
+    find: `${pkg.split('.')[0]}`,
+    replacement: nodePath(`ember-source/dist/dependencies/${pkg}`),
   })),
   ...emberGlimmerDepsPackages().map((pkg) => ({
     find: `@glimmer/${pkg}`,
@@ -17,10 +21,6 @@ export const coreAlias = [
     find: 'ember-template-compiler',
     replacement:
       'ember-source/dist/ember-template-compiler.js',
-  },
-  {
-    find: 'tracked-toolbox',
-    replacement: nodePath('tracked-toolbox/dist')
   },
   {
     find: /^ember-testing$/,
@@ -65,20 +65,12 @@ export const coreAlias = [
     ),
   },
   {
-    find: /@glimmer\/tracking$/,
-    replacement: nodePath('ember-source/dist/packages/@glimmer/tracking'),
-  },
-  {
     find: /^@embroider\/macros\/es-compat2$/,
     replacement: nodePath('@embroider/macros/src/addon/es-compat2.js'),
   },
   {
     find: /^@embroider\/macros\/es-compat$/,
     replacement: nodePath('@embroider/macros/src/addon/es-compat2.js'),
-  },
-  {
-    find: /^@embroider\/macros\/runtime$/,
-    replacement: nodePath('@embroider/macros/src/addon/runtime'),
   },
   { find: /^ember$/, replacement: 'ember-source/dist/packages/ember' },
   {
@@ -138,3 +130,5 @@ if (!fs.existsSync('./node_modules/jquery')) {
     replacement: compatPath('jquery'),
   });
 }
+
+console.log(coreAlias);

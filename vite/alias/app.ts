@@ -30,7 +30,7 @@ export const appAlias = [
 
 appAlias.push({
   find: new RegExp(`^${projectName}\\/`),
-  replacement: '/app/'
+  replacement: isAddon ? '/addon/' : '/app/'
 });
 
 if (isAddon) {

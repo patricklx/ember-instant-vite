@@ -22,6 +22,11 @@ export function emberPackages() {
   return fs.readdirSync('node_modules/ember-source/dist/packages/@ember');
 }
 
+export function emberPackageDeps() {
+  return fs.readdirSync('node_modules/ember-source/dist/dependencies')
+      .filter(el => el !== '@glimmer')
+}
+
 export function eDataPackages() {
   const els = fs.readdirSync('node_modules/@ember-data');
   return els.filter((e) => e !== 'private-build-infra');

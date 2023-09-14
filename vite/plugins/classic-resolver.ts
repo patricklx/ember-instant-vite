@@ -6,6 +6,7 @@ import { emberDeps, emberAddons, projectName, app as emberApp, getIsTesting } fr
 const rootDir = path.resolve('.').replaceAll('\\', '/');
 const currentDir = path.dirname(import.meta.url.replace('file:///', '')).replaceAll('\\', '/');
 const compatDir = path.resolve(currentDir, '../compat/classic').replaceAll('\\', '/');
+const cacheDir = path.resolve(currentDir, '../.cache').replaceAll('\\', '/');
 
 const init = path.join(compatDir, 'init.js').replaceAll('\\', '/');
 const app = path.join(compatDir, 'app.js').replaceAll('\\', '/');
@@ -74,30 +75,14 @@ const testingAddon = {
   addon: `/addon/**/*.{${extensions.join(',')}}`
 }
 
-export default function hbsResolver() {
+export default function classicResolver() {
   return {
     name: 'classic-resolver',
     enforce: 'pre',
     resolveId(id) {
-      if (id === 'ember-cli-addon-docs/app-files') {
-        return 'ember-cli-addon-docs/app-files'
-      }
-    },
-    load(id) {
-      if (id === 'ember-cli-addon-docs/app-files') {
-        return {
-          code: `export default Object.keys(import.meta.glob("../../${appRoot}/**/*"))`
-        }
-      }
-      if (id === 'ember-cli-addon-docs/addon-files') {
-        return {
-          code: 'export default Object.keys(import.meta.glob("../../addon/**/*"))'
-        }
-      }
-    },
-    transform(src, id) {
-      let code = '';
 
+    },
+    async load(id) {
       if (id === styles) {
         let code = '';
         let st = path.join(rootDir, 'app', 'styles', 'app.css');
@@ -127,6 +112,10 @@ export default function hbsResolver() {
           map: null
         };
       }
+      let code = '';
+      const cacheFile = path.join(cacheDir, id.split('/').slice(-1)[0]);
+
+
       if (id === contentFor) {
         const placeHolders = ['head', 'head-footer', 'body', 'body-footer'];
         const contents = {};
@@ -151,20 +140,15 @@ export default function hbsResolver() {
           map: null
         };
       }
-      if (id === config) {
-        return {
-          code: src.replace(/module.exports\s*=\s*/, 'export default '),
-          map: null, // provide source map if available
-        };
-      }
-      if (id === loader) {
-        return {
-          code: src + '\nexport default { require, define };',
-          map: null, // provide source map if available
-        };
-      }
+
       let imports;
       if (id === init) {
+        if (fs.existsSync(cacheFile)) {
+          const code = (await fs.promises.readFile(cacheFile)).toString();
+          return {
+            code
+          };
+        }
         code += `const appModules = import.meta.glob([
         '../../${appRoot}/init/**/*.{js,ts}',
         '../../${appRoot}/initializers/**/*.{js,ts}',
@@ -180,9 +164,9 @@ export default function hbsResolver() {
             '{app,_app_}/initializers/**/*.{js,ts}',
             '{app,_app_}/instance-initializers/**/*.{js,ts}'
           ], { cwd: root, ignore: ResolverConfig.ignoreAddonFiles[name] })
-            .map(r => r.replace(extRegex, ''))
-            .map(r => r.replaceAll('\\', '/'))
-            .map(r => ({ name: r, import: path.join(root, r), addon: name }));
+              .map(r => r.replace(extRegex, ''))
+              .map(r => r.replaceAll('\\', '/'))
+              .map(r => ({ name: r, import: path.join(root, r), addon: name }));
           imports.push(...addonFiles);
         }
       }
@@ -200,17 +184,23 @@ export default function hbsResolver() {
           code += `const addonAppModules = import.meta.glob([
         '${testingAddon.app}',
         ], { eager: true });
-        Object.entries(addonAppModules).forEach(([name, imp]) => define(name.replace('/app/', '${testingAddon.name}/').split('.').slice(0, -1).join('/'), [], () => imp));
+        Object.entries(addonAppModules).forEach(([name, imp]) => define(name.replace('/app/', '${appName}/').split('.').slice(0, -1).join('/'), [], () => imp));
         `;
           code += `const addonModules = import.meta.glob([
-        '${testingAddon.app}}',
+        '${testingAddon.addon}',
         ], { eager: true });
-        Object.entries(addonModules).forEach(([name, imp]) => define(name.replace('/addon/', '${appName}/').split('.').slice(0, -1).join('/'), [], () => imp));
+        Object.entries(addonModules).forEach(([name, imp]) => define(name.replace('/addon/', '${testingAddon.name}/').split('.').slice(0, -1).join('/'), [], () => imp));
         `;
         }
         imports = [];
       }
       if (id === addons) {
+        if (fs.existsSync(cacheFile)) {
+          const code =  await fs.promises.readFile(cacheFile);
+          return {
+            code: code.toString()
+          };
+        }
         imports = [];
         const processed = new Set();
         for (const emberAddon of emberAddons) {
@@ -223,9 +213,9 @@ export default function hbsResolver() {
           const ignore = [...ResolverConfig.ignoreAddonFiles[name] || []];
           ignore.push(...['**/*.d.ts', '**/*.js.map', '{app,_app_}/{initializers,instance-initializers}/**/*', 'addon/{initializers,instance-initializers}/**/*']);
           const addonFiles = glob.sync([addonGlob, 'addon/index.{js,ts}'], { cwd: root, ignore })
-            .map(r => r.replace(/\.(ts|js|gts|gjs)$/, ''))
-            .map(r => r.replaceAll('\\', '/'))
-            .map(r => ({ name: r, import: path.join(root, r).replaceAll('\\', '/'), addon: name }));
+              .map(r => r.replace(/\.(ts|js|gts|gjs)$/, ''))
+              .map(r => r.replaceAll('\\', '/'))
+              .map(r => ({ name: r, import: path.join(root, r).replaceAll('\\', '/'), addon: name }));
           imports.push(...addonFiles);
         }
       }
@@ -241,20 +231,46 @@ export default function hbsResolver() {
             }
           }
           const name = r.name.replace('.hbs', '')
-            .replace(/^app\//, `${appName}/`)
-            .replace(/^dist\/_app_\//, `${appName}/`)
-            .replace(/^addon\//, `${r.addon}/`);
+              .replace(/^app\//, `${appName}/`)
+              .replace(/^dist\/_app_\//, `${appName}/`)
+              .replace(/^addon\//, `${r.addon}/`);
           return `define('${name}', [], () => imp${i})`;
         });
         code += imps.join(';\n') + '\n' + defines.join(';\n');
         if (id === app) {
           code += `\nexport default globalThis.require('${appName}/app').default`;
         }
+        if (id === init || id === addons) {
+          await fs.promises.writeFile(cacheFile, code)
+        }
         return {
           code,
           map: null, // provide source map if available
         };
       }
+      return null;
     },
+    async transform(src, id) {
+      id = id.replaceAll('\\', '/');
+      if (id === config) {
+        return {
+          code: src.replace(/module.exports\s*=\s*/, 'export default '),
+          map: null, // provide source map if available
+        };
+      }
+
+      if (id.includes('loader.js')) {
+        id = await fs.promises.realpath(id);
+        id = id.replaceAll('\\', '/');
+        console.log(id, loader, id === loader)
+      }
+
+      if (id === loader) {
+        return {
+          code: src + '\nexport default { require, define };',
+          map: null, // provide source map if available
+        };
+      }
+    }
   };
 }

@@ -29,7 +29,7 @@ const templateRegex = new RegExp(`.*\\.(${templateExtensions.join('|')})$`);
 const projectName = typeof app.project.name === 'string' ? app.project.name : app.project.name();
 const mainApp = isAddon ? app.project.addons.find(a => a.name === projectName) : app.project;
 
-
+const isPnpm = fs.existsSync('node_modules/.pnpm');
 function tpl(raw, id, isProd) {
   id = relativePath(id);
   let optsSource = '';
@@ -47,7 +47,11 @@ export default function classicProcessor(isProd) {
     async transform(src, id) {
       id = id.replaceAll('\\', '/')
       let localId = relativePath(id)
-      const root = rootPath(id)
+      let root = rootPath(id);
+      if (isPnpm && (!root.includes('/.pnpm/') || (fs.existsSync(root) && fs.lstatSync(root).isSymbolicLink()))) {
+        root = await fs.promises.realpath(root);
+        root = root.replaceAll('\\', '/');
+      }
 
       let code = src;
       if (templateRegex.test(localId, localId)) {
@@ -91,6 +95,9 @@ export default function classicProcessor(isProd) {
               break;
             }
           }
+        }
+        if (id.includes('@ember-data/adapter')) {
+          console.log('@ember-data/adapter', root, mapping[root]);
         }
         const addon = (id.includes('/_app_/') || id.includes('/app/')) ? mainApp : (mapping[root] || mainApp);
         let result = addon.emberBabelOptions && await parallelBabel.transformString(code, {

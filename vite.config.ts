@@ -1,29 +1,23 @@
 import { defineConfig } from 'vite';
 import babel from 'vite-plugin-babel';
 import { resolve } from 'node:path';
-import nodeResolve from 'resolve';
-import { promisify } from 'util';
-import classicProcessor from './vite/plugins/classic-processor';
-import gtsResolver from './vite/plugins/gts-resolver';
-import configResolver from './vite/plugins/classic-resolver';
-import i18nLoader from './vite/plugins/i18n-loader';
 import { generateDefineConfig } from './vite/compat/ember-data-private-build-infra';
 import { coreAlias } from './vite/alias/core';
 import { addonAliases, externals } from './vite/alias/addons';
 import { appAlias } from './vite/alias/app';
-import { emberAddons, emberDeps, app, scssImporters } from './vite/utils';
+import { emberAddons, emberDeps, app, scssImporters, allExtensions } from './vite/utils';
 import fs from 'node:fs';
 import externalize from 'vite-plugin-externalize-dependencies';
 import commonjs from 'vite-plugin-commonjs';
 import path from 'path';
 import { pathsImporter } from './vite/plugins/scss-utils';
 import './vite/setup'
+import { emberResolvers } from './vite/resolvers';
+import emberResolver from './vite/plugins/ember-resolver';
+import classicProcessor from './vite/plugins/classic-processor';
+import classicResolver from './vite/plugins/classic-resolver';
 
 
-const asyncNodeResolve = promisify(nodeResolve);
-
-const allExtensions = ['.mjs', '.js', '.ts', '.jsx', '.tsx', '.json', '.hbs', '.gts', '.gjs'];
-console.log(emberDeps);
 function isExternal(id: string) {
   return !id.startsWith('.') && !path.isAbsolute(id) && !id.startsWith('~/');
 }
@@ -34,39 +28,6 @@ const cssIncludePaths = [
   ...emberAddons.map(a => fs.existsSync(path.join(a.root, 'app', 'styles')) && path.join(a.root, 'app', 'styles')).filter(x => !!x),
   ...emberAddons.map(a => fs.existsSync(path.join(a.root, 'addon', 'styles')) && path.join(a.root, 'addon', 'styles')).filter(x => !!x)
 ];
-
-const customResolver= {
-  name: 'ember-resolver',
-  resolveId: {
-    async handler(importee, importer, resolveOptions) {
-      console.log('importer, importee', importer, importee);
-      try {
-        const parts = importee.split('/');
-        if (parts[0].startsWith('@')) {
-          parts.splice(2, 0, 'addon');
-        } else {
-          parts.splice(1, 0, 'addon');
-        }
-        importee = parts.join('/')
-        return await asyncNodeResolve(importee, { basedir: importer, extensions: ['.js', '.ts', '.gts', '.gjs'] })
-      } catch (e) {
-
-      }
-      try {
-        const parts = importee.split('/');
-        if (parts[0].startsWith('@')) {
-          parts.splice(2, 0, 'dist');
-        } else {
-          parts.splice(1, 0, 'dist');
-        }
-        importee = parts.join('/')
-        return await asyncNodeResolve(importee, { basedir: importer, extensions: ['.js', '.ts', '.gts', '.gjs'] })
-      } catch (e) {
-        throw e;
-      }
-    }
-  }
-}
 
 export default defineConfig(({ mode }) => {
   const isProd = mode === 'production';
@@ -102,10 +63,7 @@ export default defineConfig(({ mode }) => {
               const filter = new RegExp('.*\\.(hbs|js|ts)$');
               build.onLoad({ filter, namespace }, async(args) => {
                 const contents = await fs.promises.readFile(args.path, 'utf8');
-                const res = await classicProcessor().transform(contents, args.path);
-                return {
-                  contents: res.code
-                };
+
               });
             }
           }
@@ -184,11 +142,12 @@ export default defineConfig(({ mode }) => {
       alias: [
         ...coreAlias,
         ...appAlias,
-        ...addonAliases.map(x => ({find: x.find, replacement: x.replacement, customResolver}))
+        ...addonAliases
       ],
     },
     plugins: [
       externalize({ externals: externals }),
+      ...emberResolvers(),
       commonjs({
         filter(id) {
           // `node_modules` is exclude by default, so we need to include it explicitly
@@ -214,10 +173,6 @@ export default defineConfig(({ mode }) => {
           }
         }
       }),
-      gtsResolver(isProd),
-      configResolver(),
-      classicProcessor(),
-      i18nLoader(),
       !isDev
         ? babel({
           filter: /^.*@(ember|glimmer|ember-data)\/.*\.(ts|js|hbs)$/,
