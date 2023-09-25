@@ -14,11 +14,15 @@ const contentFor = path.join(compatDir, 'content-for.js').replaceAll('\\', '/');
 const addons = path.join(compatDir, 'addons.js').replaceAll('\\', '/');
 const styles = path.join(compatDir, 'styles.js').replaceAll('\\', '/');
 const dummy = path.join(compatDir, 'dummy.js').replaceAll('\\', '/');
-const config = path.join(rootDir, 'config/environment.js').replaceAll('\\', '/');
+let config = path.join(rootDir, 'config/environment.js').replaceAll('\\', '/');
 const glimmerOwner = path.join(rootDir, 'node_modules/@glimmer/component/addon/-private/owner.ts').replaceAll('\\', '/');
 const loader = require.resolve('loader.js').replaceAll('\\', '/');
 
-console.log('app', currentDir, compatDir, app)
+const isAddon = fs.existsSync('addon');
+
+if (isAddon) {
+  config = path.join(rootDir, 'tests/dummy/config/environment.js').replaceAll('\\', '/');
+}
 
 const ResolverConfig = {
   resolveDirs: [
@@ -64,7 +68,6 @@ const extRegex = new RegExp(`\\.(${extensions.join('|')})$`);
 
 const addonGlob = `{app,addon,dist/_app_}/{${ResolverConfig.resolveDirs.join(',')}}/**/*.{${extensions.join(',')}}`;
 
-const isAddon = fs.existsSync('addon');
 const isTesting = getIsTesting();
 
 const appName = (isAddon || isTesting) ? 'dummy' : projectName;

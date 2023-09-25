@@ -8,7 +8,7 @@ import { appAlias } from './vite/alias/app';
 import { emberAddons, emberDeps, app, scssImporters, allExtensions } from './vite/utils';
 import fs from 'node:fs';
 import externalize from 'vite-plugin-externalize-dependencies';
-import commonjs from 'vite-plugin-commonjs';
+import commonjs from '@rollup/plugin-commonjs';
 import path from 'path';
 import { pathsImporter } from './vite/plugins/scss-utils';
 import './vite/setup'
@@ -28,6 +28,8 @@ const cssIncludePaths = [
   ...emberAddons.map(a => fs.existsSync(path.join(a.root, 'app', 'styles')) && path.join(a.root, 'app', 'styles')).filter(x => !!x),
   ...emberAddons.map(a => fs.existsSync(path.join(a.root, 'addon', 'styles')) && path.join(a.root, 'addon', 'styles')).filter(x => !!x)
 ];
+
+console.log('emberAddons', emberAddons.map(e => e.packageRoot));
 
 export default defineConfig(({ mode }) => {
   const isProd = mode === 'production';
@@ -149,28 +151,42 @@ export default defineConfig(({ mode }) => {
       externalize({ externals: externals }),
       ...emberResolvers(),
       commonjs({
-        filter(id) {
+        namedExports: {
+          './node_modules/.pnpm/ember-cli-clipboard@1.0.0_@glint+template@1.0.2_ember-source@5.2.0_webpack@5.87.0/node_modules/prop-types/index.js': [
+            'string', 'oneOf', 'boolean', 'oneOfType', 'func', 'element'
+          ],
+          './node_modules/.pnpm/ember-arg-types@1.0.0_@glint+template@1.0.2_webpack@5.87.0/node_modules/prop-types/index.js': [
+            'string', 'oneOf', 'boolean', 'oneOfType', 'func', 'element'
+          ]
+        },
+        ignore(id) {
+          if (!fs.existsSync(id)) {
+            return false;
+          }
+          id = fs.realpathSync(id).replaceAll('\\', '/');
           // `node_modules` is exclude by default, so we need to include it explicitly
           // https://github.com/vite-plugin/vite-plugin-commonjs/blob/v0.7.0/src/index.ts#L125-L127
-          if (emberDeps.every(cjs => !id.includes(`node_modules/${cjs}`))) {
+          if (emberAddons.some(cjs => cjs.packageRoot.includes('/node_modules/') && id.startsWith(cjs.packageRoot) && !id.replace(cjs.packageRoot, '').includes('/node_modules/'))) {
+            console.log('commonjs filter', false, id);
             return true;
           }
           if (id.includes('@ember-data/model')) {
-            return true;
+            return false;
           }
           if (id.includes('moment-timezone')) {
-            return true;
+            return false;
           }
           if (id.includes('ember-power-calendar')) {
-            return true;
+            return false;
           }
           if (id.includes('/ember-data/addon')) {
-            return true;
+            return false;
           }
 
           if (id.includes('/@ember/render-modifiers')) {
-            return true;
+            return false;
           }
+          return false;
         }
       }),
       !isDev

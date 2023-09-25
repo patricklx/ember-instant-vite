@@ -41,41 +41,48 @@ export const scssImporter = [
     }
     process();
   },
-  function(url, prev) {
+  function(url, prev, done) {
     if (url !== 'pod-styles') return null;
-    const imports = glob.sync([
-      'app/**/*.scoped.{scss,sass}',
-    ]).map(r => r.replaceAll('\\', '/'));
-    const rootDir = path.resolve('.');
-    for (const emberDep of emberDeps) {
-      const root = path.join(rootDir, 'node_modules', emberDep);
-      const addonFiles = glob.sync([
+
+    async function process() {
+      const imports = await glob([
         'app/**/*.scoped.{scss,sass}',
-      ], { cwd: root }).map(r => r.replaceAll('\\', '/'));
-      imports.push(...addonFiles.map(f => path.join(root, f)));
+      ]).map(r => r.replaceAll('\\', '/'));
+      const rootDir = path.resolve('.');
+      for (const emberDep of emberDeps) {
+        const root = path.join(rootDir, 'node_modules', emberDep);
+        const addonFiles = glob.sync([
+          'app/**/*.scoped.{scss,sass}',
+        ], { cwd: root }).map(r => r.replaceAll('\\', '/'));
+        imports.push(...addonFiles.map(f => path.join(root, f)));
+      }
+      done({
+        contents: imports.map(i => `@import '${i}';`).join('\n'),
+        syntax: 'scss'
+      });
     }
-    return {
-      contents: imports.map(i => `@import '${i}';`).join('\n'),
-      syntax: 'scss'
-    };
+    process();
   }
   ,
-  function(url) {
+  function(url, prev, done) {
     if (url !== 'modules') return null;
-    const imports = glob.sync([
-      'app/**/*.module.{scss,sass}'
-    ]).map(r => r.replaceAll('\\', '/'));
-    const rootDir = path.resolve('.');
-    for (const emberDep of emberDeps) {
-      const root = path.join(rootDir, 'node_modules', emberDep);
-      const addonFiles = glob.sync([
-        'addon/**/*.module.{scss,sass}'
-      ], { cwd: root }).map(r => r.replaceAll('\\', '/'));
-      imports.push(...addonFiles.map(f => path.join(root, f)));
+    async function process() {
+      const imports = await glob([
+        'app/**/*.module.{scss,sass}'
+      ]).map(r => r.replaceAll('\\', '/'));
+      const rootDir = path.resolve('.');
+      for (const emberDep of emberDeps) {
+        const root = path.join(rootDir, 'node_modules', emberDep);
+        const addonFiles = glob.sync([
+          'addon/**/*.module.{scss,sass}'
+        ], { cwd: root }).map(r => r.replaceAll('\\', '/'));
+        imports.push(...addonFiles.map(f => path.join(root, f)));
+      }
+      done({
+        contents: imports.map(i => `@import '${i}';`).join('\n'),
+        syntax: 'scss'
+      });
     }
-    return {
-      contents: imports.map(i => `@import '${i}';`).join('\n'),
-      syntax: 'scss'
-    };
+    process();
   }
 ];
