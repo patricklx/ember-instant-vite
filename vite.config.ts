@@ -12,15 +12,8 @@ import commonjs from '@rollup/plugin-commonjs';
 import path from 'path';
 import { pathsImporter } from './vite/plugins/scss-utils';
 import './vite/setup'
-import { emberResolvers } from './vite/resolvers';
-import emberResolver from './vite/plugins/ember-resolver';
-import classicProcessor from './vite/plugins/classic-processor';
-import classicResolver from './vite/plugins/classic-resolver';
-
-
-function isExternal(id: string) {
-  return !id.startsWith('.') && !path.isAbsolute(id) && !id.startsWith('~/');
-}
+import { emberPlugins } from './vite/plugins';
+import { module } from 'qunit';
 
 const cssIncludePaths = [
   process.cwd(),
@@ -100,6 +93,7 @@ export default defineConfig(({ mode }) => {
         : {
           output: {
             manualChunks(id) {
+              console.log('manualChunks', id)
               if (
                 id.includes('/compat/') ||
                 id.includes('@ember/') ||
@@ -149,45 +143,7 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [
       externalize({ externals: externals }),
-      ...emberResolvers(),
-      commonjs({
-        transformMixedEsModules: true,
-        ignore(id) {
-          if (id.includes('\u0000')) {
-            return true;
-          }
-          if (!fs.existsSync(id)) {
-            return false;
-          }
-          id = fs.realpathSync(id).replaceAll('\\', '/');
-          // `node_modules` is exclude by default, so we need to include it explicitly
-          // https://github.com/vite-plugin/vite-plugin-commonjs/blob/v0.7.0/src/index.ts#L125-L127
-          if (id.includes('@ember-data/model')) {
-            return false;
-          }
-          if (id.includes('moment-timezone')) {
-            return false;
-          }
-          if (id.includes('ember-cli-clipboard')) {
-            return false;
-          }
-          if (id.includes('ember-power-calendar')) {
-            return false;
-          }
-          if (id.includes('/ember-data/addon')) {
-            return false;
-          }
-
-          if (id.includes('/@ember/render-modifiers')) {
-            return false;
-          }
-          if (emberAddons.some(cjs => cjs.packageRoot.includes('/node_modules/') && id.startsWith(cjs.packageRoot) && !id.replace(cjs.packageRoot, '').includes('/node_modules/'))) {
-            console.log('commonjs filter', false, id);
-            return true;
-          }
-          return false;
-        }
-      }),
+      ...emberPlugins(),
       !isDev
         ? babel({
           filter: /^.*@(ember|glimmer|ember-data)\/.*\.(ts|js|hbs)$/,
