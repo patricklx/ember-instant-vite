@@ -1,2 +1,2 @@
 vite @glimmer/syntax fast-glob broccoli-babel-transpiler vite-plugin-externalize-dependencies vite-plugin-commonjs embe
-r-template-tag js-string-escape
+r-template-tag js-string-escape spark-md5 vite-plugin-generate-file

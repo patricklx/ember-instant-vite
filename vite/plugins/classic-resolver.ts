@@ -2,19 +2,16 @@ import glob from 'fast-glob';
 import path from 'path';
 import fs from 'fs';
 import {
-  emberDeps,
   emberAddons,
   projectName,
-  app as emberApp,
   getIsTesting,
-  hasCacheFor,
-  loadFromCacheAsync, saveToCache
+  app as emberApp,
 } from '../utils';
+import { hasCacheFor, loadFromCacheAsync, saveToCache } from '../cache';
 
 const rootDir = path.resolve('.').replaceAll('\\', '/');
 const currentDir = path.dirname(import.meta.url.replace('file:///', '')).replaceAll('\\', '/');
 const compatDir = path.resolve(currentDir, '../compat/classic').replaceAll('\\', '/');
-const cacheDir = path.resolve(currentDir, '../.cache').replaceAll('\\', '/');
 
 const init = path.join(compatDir, 'init.js').replaceAll('\\', '/');
 const app = path.join(compatDir, 'app.js').replaceAll('\\', '/');
@@ -282,7 +279,7 @@ export default function classicResolver(mode) {
         }
 
         emberAddons.forEach(a => {
-          contents = a.config?.(mode, contents) || contents;
+          contents = Object.assign({}, a.config?.(mode, contents) || {}, contents);
         })
 
         const code = `export default ${JSON.stringify(contents, null, 2)};`

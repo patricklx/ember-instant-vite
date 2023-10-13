@@ -8,7 +8,6 @@ import { appAlias } from './vite/alias/app';
 import { emberAddons, emberDeps, app, scssImporters, allExtensions } from './vite/utils';
 import fs from 'node:fs';
 import externalize from 'vite-plugin-externalize-dependencies';
-import commonjs from '@rollup/plugin-commonjs';
 import path from 'path';
 import { pathsImporter } from './vite/plugins/scss-utils';
 import './vite/setup'
@@ -143,7 +142,7 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [
       externalize({ externals: externals }),
-      ...emberPlugins(),
+      ...emberPlugins(mode),
       !isDev
         ? babel({
           filter: /^.*@(ember|glimmer|ember-data)\/.*\.(ts|js|hbs)$/,

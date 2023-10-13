@@ -4,15 +4,15 @@ import fs from 'node:fs';
 
 export const coreAlias = [
   ...emberPackages().map((pkg) => ({
-    find: `@ember/${pkg}`,
+    find: new RegExp(`^@ember/${pkg}$`),
     replacement: nodePath(`ember-source/dist/packages/@ember/${pkg}`),
   })),
   ...emberPackageDeps().map((pkg) => ({
-    find: `${pkg.split('.')[0]}`,
+    find: new RegExp(`^${pkg.split('.')[0]}$`),
     replacement: nodePath(`ember-source/dist/dependencies/${pkg}`),
   })),
   ...emberGlimmerDepsPackages().map((pkg) => ({
-    find: `@glimmer/${pkg}`,
+    find: new RegExp(`^@glimmer/${pkg}$`),
     replacement: nodePath(
       `ember-source/dist/dependencies/@glimmer/${pkg}`
     ),

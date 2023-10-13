@@ -42,7 +42,7 @@ export function getDataConfig(debug: boolean) {
     debug: DEBUGGING,
     deprecations: DEPRECATIONS,
     env: {
-      DEBUG: debug,
+      DEBUG: false,
     },
   };
 }

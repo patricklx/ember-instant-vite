@@ -54,11 +54,3 @@ export const addonAliases = [
     replacement: 'ember-power-calendar/utils',
   }
 ];
-
-
-if (isAddon) {
-  addonAliases.push({
-    find: app.project.name,
-    replacement: '/addon/'
-  });
-}

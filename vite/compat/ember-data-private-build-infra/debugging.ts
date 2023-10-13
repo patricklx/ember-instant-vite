@@ -1,9 +1,9 @@
 /* eslint-disable no-var */
 export var LOG_PAYLOADS = false;
-export var LOG_IDENTIFIERS = true;
+export var LOG_IDENTIFIERS = false;
 export var LOG_NOTIFICATIONS = false;
 export var LOG_INSTANCE_CACHE = false;
-export var LOG_GRAPH = true;
+export var LOG_GRAPH = false;
 export var LOG_MUTATIONS = false;
 export var LOG_OPERATIONS = false;
 

@@ -36,7 +36,7 @@ const namedImportsFix = {
       if (id.includes('\u0000')) {
         return null;
       }
-      if (!id.endsWith('.js')) {
+      if (!id.endsWith('.js') && !id.endsWith('.ts')) {
         return null;
       }
       const namedImports = {};

@@ -2,9 +2,29 @@ import { promisify } from 'util';
 import nodeResolve from 'resolve';
 import fs from 'fs';
 import { allExtensions, rootPath } from '../utils';
+import { coreAlias } from '../alias/core';
+import { appAlias } from '../alias/app';
+import { addonAliases } from '../alias/addons';
 
 const { dirname } = require('node:path');
 
+const aliases = [
+  ...coreAlias,
+  ...appAlias,
+  ...addonAliases
+];
+
+function findAlias(importee: string) {
+  const alias = aliases.find((a) => {
+    if (typeof a.find === 'string') {
+      return importee.startsWith(a.find);
+    }
+    return a.find.test(importee);
+  });
+  if (alias) {
+    return alias.replacement;
+  }
+}
 
 const asyncNodeResolve = promisify(nodeResolve);
 
@@ -128,6 +148,8 @@ function emberResolver(isProd) {
               if (importee.endsWith('.json')) {
                 return null;
               }
+
+              importee = findAlias(importee) || importee;
 
               if (importer && importer.includes('\u0000')) {
                 importer = '.'
