@@ -103,6 +103,7 @@ const namedImportsFix = {
       };
 
       b.transform(src, {
+        filename: id,
         plugins: [{
           visitor: {
             ImportDeclaration(path: b.NodePath<t.ImportDeclaration>) {
@@ -127,6 +128,7 @@ const namedImportsFix = {
         namedImports[key] = moduleInfo;
       }
       const r = await b.transform(src, {
+        filename: id,
         sourceMaps: 'inline',
         plugins: [plugin]
       });
